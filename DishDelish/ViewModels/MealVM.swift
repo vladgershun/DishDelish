@@ -10,19 +10,28 @@ import Foundation
 @MainActor
 class MealVM: ObservableObject {
     
+    enum State {
+        case loading
+        case success([Meal])
+        case failed
+    }
+    
     private var networkService: any NetworkService
     
-    @Published var meals: [Meal] = []
+    @Published private(set) var state: State = .loading
     
     init(networkService: any NetworkService) {
         self.networkService = networkService
     }
     
-    func getMeals() {
+    func getMeals() async {
         let urlString = "https://themealdb.com/api/json/v1/1/filter.php?c=Dessert"
-        Task {
+        do {
             let allMeals: Meals = try await networkService.getData(url: urlString)
-            self.meals = allMeals.meals
+            let sorted = allMeals.meals.sorted { $0.title < $1.title }
+            self.state = .success(sorted)
+        } catch {
+            self.state = .failed
         }
     }
 }
